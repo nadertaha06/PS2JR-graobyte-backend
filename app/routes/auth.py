@@ -2,17 +2,35 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from app.database import usuarios
 from bson import ObjectId
+from bson.errors import InvalidId
 import bcrypt
 
 auth_bp = Blueprint('auth', __name__)
 
+
+def _campos_validos(data, campos):
+    """Verifica se os campos obrigatórios existem e são strings não-vazias."""
+    if not data:
+        return False
+    for campo in campos:
+        valor = data.get(campo)
+        if not isinstance(valor, str) or not valor.strip():
+            return False
+    return True
+
+
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not _campos_validos(data, ['email', 'senha']):
+        return jsonify({'erro': 'Dados inválidos'}), 400
+
     usuario = usuarios.find_one({'email': data['email']})
 
+    credenciais_invalidas = jsonify({'erro': 'Credenciais inválidas'}), 401
+
     if not usuario:
-        return jsonify({'erro': 'Usuário não encontrado'}), 404
+        return credenciais_invalidas
 
     senha_correta = bcrypt.checkpw(
         data['senha'].encode('utf-8'),
@@ -20,7 +38,7 @@ def login():
     )
 
     if not senha_correta:
-        return jsonify({'erro': 'Senha incorreta'}), 401
+        return credenciais_invalidas
 
     token = create_access_token(identity=str(usuario['_id']), additional_claims={
         'role': usuario['role']
@@ -41,7 +59,10 @@ def cadastrar_funcionario():
     if not usuario_atual or usuario_atual['role'] != 'admin':
         return jsonify({'erro': 'Acesso negado'}), 403
 
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not _campos_validos(data, ['nome', 'email', 'senha']):
+        return jsonify({'erro': 'Dados inválidos'}), 400
+
     if usuarios.find_one({'email': data['email']}):
         return jsonify({'erro': 'Email já cadastrado'}), 400
 
@@ -83,7 +104,12 @@ def deletar_funcionario(id):
     if not usuario_atual or usuario_atual['role'] != 'admin':
         return jsonify({'erro': 'Acesso negado'}), 403
 
-    resultado = usuarios.delete_one({'_id': ObjectId(id), 'role': 'funcionario'})
+    try:
+        oid = ObjectId(id)
+    except InvalidId:
+        return jsonify({'erro': 'ID inválido'}), 400
+
+    resultado = usuarios.delete_one({'_id': oid, 'role': 'funcionario'})
     if resultado.deleted_count == 0:
         return jsonify({'erro': 'Funcionário não encontrado'}), 404
 

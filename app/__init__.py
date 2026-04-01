@@ -7,7 +7,8 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    CORS(app)
+    origens = app.config.get('CORS_ORIGINS', '*')
+    CORS(app, origins=origens)
     JWTManager(app)
 
     from app.routes.auth import auth_bp
