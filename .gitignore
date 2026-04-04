@@ -31,4 +31,7 @@ htmlcov/
 *.sublime-project
 *.sublime-workspace
 
+# Node
+node_modules/
+
 #
