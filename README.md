@@ -2,6 +2,8 @@
 
 API REST desenvolvida em Flask para o backend do projeto GraoByte. Gerencia autenticação de usuários e CRUD de produtos, com controle de acesso baseado em roles (admin/funcionário) e armazenamento no MongoDB.
 
+**Deploy:** https://ps2jr-graobyte-backend-production.up.railway.app
+
 ## Tecnologias
 
 - **Python / Flask** — framework web
